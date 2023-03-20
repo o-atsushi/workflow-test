@@ -1,8 +1,10 @@
-name: GitHub Actions Demo
+name: Create Workato Role
 run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
-on: [push]
+on: 
+  push:
+    branches: [ main ]
 jobs:
-  Explore-GitHub-Actions:
+  create-workato-role:
     runs-on: ubuntu-latest
     steps:
       - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
@@ -16,3 +18,70 @@ jobs:
         run: |
           ls ${{ github.workspace }}
       - run: echo "🍏 This job's status is ${{ job.status }}."
+      # ここからがテスト用の設定（オカダ個人用のAWSアカウント）
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: "ap-northeast-1"
+          role-to-assume: "arn:aws:iam::187942436951:role/okada-deployer"
+          role-duration-seconds: 3600
+          role-session-name: "create-workato-role-cdk-test@GitHubActions"
+
+      # ここから↓が本番に適用する用 （TODO: prodしか使わないし、べた書きでいいかも？もしくは、test環境とかでテストすることも見越して環境変数化しておく？）
+
+      # - name: Set env to hr-gate-prod
+      #   run: |
+      #     echo "ROLE_TO_ASSUME=${{ secrets.ROLE_TO_ASSUME_GATE_PROD }}" >> $GITHUB_ENV
+      #     echo "DEPLOY_TARGET=hr-gate-prod" >> $GITHUB_ENV
+      #     echo "SLACK_CHANNEL=aws-infra_notify" >> $GITHUB_ENV
+
+      # - name: Configure AWS Credentials
+      #   uses: aws-actions/configure-aws-credentials@v1
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: "ap-northeast-1"
+      #     role-to-assume: "arn:aws:iam::${{ env.ROLE_TO_ASSUME }}:role/hr-deployer"
+      #     role-duration-seconds: 3600
+      #     role-session-name: "create-workato-role-cdk@GitHubActions"
+
+      - name: checkout source
+        uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "19" # node-versionはorganization-iamにならって19にしておく
+
+      - name: install aws-cdk
+        run: npm install -g aws-cdk
+
+      - name: cdk version
+        run: cdk --version
+
+      # - name: npm install
+      #   run: |
+      #         cd ./cdk
+      #         npm install
+      #         cdk deploy ${{ env.DEPLOY_TARGET }} --require-approval never
+      #   env:
+      #     AWS_DEFAULT_REGION: "ap-northeast-1"
+
+
+# unchike の worklogではデプロイする前に↓をやってる。
+      # -   name: cdk synth
+      #     run: cd ./unchike-worklog-iac && cdk synth
+      #     env:
+      #         AWS_DEFAULT_REGION: "ap-northeast-1"
+
+      # -   name: cdk diff
+      #     run: cd ./unchike-worklog-iac && cdk diff
+      #     env:
+      #         AWS_DEFAULT_REGION: "ap-northeast-1"
+
+#            -   name: cdk bootstrap
+#                run: cd ./unchike-worklog-iac && cdk bootstrap
+#                env:
+#                    AWS_DEFAULT_REGION: "ap-northeast-1"
